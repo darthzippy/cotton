@@ -1,0 +1,42 @@
+# encoding: utf-8
+
+Doubleshot.new do |config|
+
+  config.project = "cotton"
+  config.group   = "org.sam.cotton"
+  config.version = "0.1.0"
+
+  config.gem "doubleshot", ">= 0.3.0"
+
+  if ENV["TRAVIS"]
+    config.mvn_repository "http://maven.mirrors.travis-ci.org/nexus/content/groups/public/"
+    config.mvn_repository "http://maven.mirrors.travis-ci.org/nexus/content/repositories/apache/"
+    config.mvn_repository "http://maven.mirrors.travis-ci.org/nexus/content/repositories/sonatype/"
+    config.mvn_repository "http://maven.mirrors.travis-ci.org/nexus/content/repositories/codehaus-snapshots/"
+    config.mvn_repository "http://maven.mirrors.travis-ci.org/nexus/content/shadows/central-m1/"
+    config.mvn_repository "http://maven.mirrors.travis-ci.org/nexus/content/repositories/central/"
+  else
+    config.mvn_repository "https://nexus.codehaus.org/content/groups/public/"
+    config.mvn_repository "https://oss.sonatype.org/content/groups/public/"
+    config.mvn_repository "http://mirrors.ibiblio.org/pub/mirrors/maven2"
+    config.mvn_repository "http://repo1.maven.org/maven2"
+  end
+
+  config.gemspec do |spec|
+    spec.summary        = "Cotton is a JRuby Web Application Framework"
+    spec.description    = <<-DESCRIPTION
+Cotton is a JRuby exclusive Web Application Framework.
+
+It takes the best of Ruby frameworks, like REST style routing, asset packaging
+and mountable apps, and adds a few tricks of it's own like first-class Forms,
+clustered caches and Sessions, and performance++.
+
+We aim to ensure Cotton is the fastest platform for Ruby on the Web, period.
+DESCRIPTION
+    spec.homepage       = "https://github.com/sam/cotton"
+    spec.author         = "Sam Smoot"
+    spec.email          = "ssmoot@gmail.com"
+    spec.license        = "MIT-LICENSE"
+  end
+
+end
