@@ -6,8 +6,6 @@ Doubleshot.new do |config|
   config.group   = "org.sam.cotton"
   config.version = "0.1.0"
 
-  config.gem "doubleshot", ">= 0.3.0"
-
   if ENV["TRAVIS"]
     config.mvn_repository "http://maven.mirrors.travis-ci.org/nexus/content/groups/public/"
     config.mvn_repository "http://maven.mirrors.travis-ci.org/nexus/content/repositories/apache/"
