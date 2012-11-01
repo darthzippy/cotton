@@ -1,2 +1,3 @@
 target
 *.gem
+.doubleshot_test.pid
