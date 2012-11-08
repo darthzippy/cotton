@@ -6,6 +6,8 @@ Doubleshot.new do |config|
   config.group   = "org.sam.cotton"
   config.version = "0.1.0"
 
+  config.java_main = "org.sam.cotton.Cotton"
+
   if ENV["TRAVIS"]
     config.mvn_repository "http://maven.mirrors.travis-ci.org/nexus/content/groups/public/"
     config.mvn_repository "http://maven.mirrors.travis-ci.org/nexus/content/repositories/apache/"
@@ -18,6 +20,15 @@ Doubleshot.new do |config|
     config.mvn_repository "https://oss.sonatype.org/content/groups/public/"
     config.mvn_repository "http://mirrors.ibiblio.org/pub/mirrors/maven2"
     config.mvn_repository "http://repo1.maven.org/maven2"
+  end
+
+  config.jar "org.eclipse.jetty:jetty-server:jar:8.1.5.v20120716"
+  config.jar "org.infinispan:infinispan-core:jar:5.1.6.FINAL"
+  config.jar "ch.qos.logback:logback-access:jar:1.0.6"
+  config.jar "ch.qos.logback:logback-classic:jar:1.0.6"
+
+  config.development do
+    config.jar "org.jruby:jruby:jar:1.7.0"
   end
 
   config.gemspec do |spec|

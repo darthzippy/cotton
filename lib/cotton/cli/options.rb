@@ -1,7 +1,7 @@
 require "optparse"
 require "ostruct"
 
-class Doubleshot
+class Cotton
   class CLI
     class Options < OpenStruct
 

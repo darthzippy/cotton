@@ -76,6 +76,7 @@ class Cotton
   end # class CLI
 end # class Cotton
 
+require_relative "commands/server"
 require_relative "commands/init"
 require_relative "commands/test"
 require_relative "commands/jar"

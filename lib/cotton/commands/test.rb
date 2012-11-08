@@ -1,4 +1,4 @@
-class Doubleshot::CLI::Commands::Test < Doubleshot::CLI
+class Cotton::CLI::Commands::Test < Cotton::CLI
   def self.summary
     <<-EOS.margin
       A test harness that watches files, builds your
@@ -11,7 +11,7 @@ class Doubleshot::CLI::Commands::Test < Doubleshot::CLI
 
   def self.options
     Options.new do |options|
-      options.banner = "Usage: doubleshot test [options]"
+      options.banner = "Usage: cotton test [options]"
 
       options.separator ""
       options.separator "Options:"

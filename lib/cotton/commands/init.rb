@@ -1,6 +1,6 @@
 require 'rexml/document'
 
-class Doubleshot::CLI::Commands::Init < Doubleshot::CLI
+class Cotton::CLI::Commands::Init < Cotton::CLI
 
   def self.summary
     <<-EOS.margin
@@ -10,7 +10,7 @@ class Doubleshot::CLI::Commands::Init < Doubleshot::CLI
 
   def self.options
     Options.new do |options|
-      options.banner = "Usage: doubleshot init [PATH]"
+      options.banner = "Usage: cotton init [PATH]"
       options.separator ""
       options.separator "  [PATH]      The path to your project directory."
       options.separator "              DEFAULT: Current working directory."

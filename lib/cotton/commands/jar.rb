@@ -1,4 +1,4 @@
-class Doubleshot::CLI::Commands::Jar < Doubleshot::CLI
+class Cotton::CLI::Commands::Jar < Cotton::CLI
 
   def self.summary
     <<-EOS.margin
@@ -8,7 +8,7 @@ class Doubleshot::CLI::Commands::Jar < Doubleshot::CLI
 
   def self.options
     Options.new do |options|
-      options.banner = "Usage: doubleshot jar"
+      options.banner = "Usage: cotton jar"
       options.separator ""
       options.separator "Options"
 

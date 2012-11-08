@@ -24,7 +24,8 @@ class Cotton::CLI::Commands::Server < Cotton::CLI
 
   def self.start(args)
     options = self.options.parse!(args)
-    # doubleshot = Doubleshot::current
+    require "doubleshot/setup"
+    org.sam.cotton.Cotton.start options.port
 
     return 0
   end
