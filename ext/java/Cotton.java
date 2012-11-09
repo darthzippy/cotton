@@ -5,6 +5,7 @@ import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.handler.HandlerCollection;
 import org.eclipse.jetty.server.handler.ContextHandlerCollection;
 import org.eclipse.jetty.server.handler.RequestLogHandler;
+import org.eclipse.jetty.server.handler.ResourceHandler;
 import ch.qos.logback.access.jetty.RequestLogImpl;
 import ch.qos.logback.classic.LoggerContext;
 import org.slf4j.LoggerFactory;
@@ -22,7 +23,7 @@ public class Cotton {
     configureConsoleLogger();
 
     Server server = new Server(port);
-    setHandlers(server, new Dispatcher(), getRequestLogHandler());
+    setHandlers(server, getResourceHandler(), getRequestLogHandler(), new Dispatcher());
 
     server.start();
     server.join();
@@ -34,6 +35,15 @@ public class Cotton {
     RequestLogHandler requestLogHandler = new RequestLogHandler();
     requestLogHandler.setRequestLog(new RequestLogImpl());
     return requestLogHandler;
+  }
+
+  private static ResourceHandler getResourceHandler() {
+    ResourceHandler resource_handler = new ResourceHandler();
+    resource_handler.setDirectoriesListed(true);
+    resource_handler.setWelcomeFiles(new String[]{ "index.html" });
+
+    resource_handler.setResourceBase("public");
+    return resource_handler;
   }
 
   private static void configureConsoleLogger() {
