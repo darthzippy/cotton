@@ -16,7 +16,7 @@ public class Cotton {
     Server server = new Server(port);
 
     HandlerCollection handlers = new HandlerCollection();
-    handlers.setHandlers(new Handler[] { new PublicFileHandler(), new RequestLogHandler(), new Dispatcher() });
+    handlers.setHandlers(new Handler[] { new PublicFileHandler("public"), new RequestLogHandler(), new Dispatcher() });
     server.setHandler(handlers);
 
     server.start();
