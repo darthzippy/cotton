@@ -45,7 +45,7 @@ public class PublicFileHandler extends HandlerWrapper {
 
   ContextHandler _context;
   Resource _baseResource = null;
-  String[] _welcomeFiles = { "index.html" };
+  String _welcome = "index.html";
   MimeTypes _mimeTypes = new MimeTypes();
   ByteArrayBuffer _cacheControl;
 
@@ -135,16 +135,6 @@ public class PublicFileHandler extends HandlerWrapper {
     return getResource(pathInContext);
   }
 
-  protected Resource getWelcome(Resource directory) throws MalformedURLException, IOException {
-    for (int i = 0; i < _welcomeFiles.length; i++) {
-      Resource welcome = directory.addPath(_welcomeFiles[i]);
-      if (welcome.exists() && !welcome.isDirectory())
-        return welcome;
-    }
-
-    return null;
-  }
-
   public void handle(String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
     if (baseRequest.isHandled())
       return;
@@ -168,20 +158,16 @@ public class PublicFileHandler extends HandlerWrapper {
       return;
     }
 
+    if (resource.isDirectory()) {
+      Resource welcome = resource.addPath(_welcome);
+      if (welcome.exists() && !welcome.isDirectory())
+        resource = welcome;
+      else
+        return;
+    }
+    
     // We are going to serve something
     baseRequest.setHandled(true);
-
-    if (resource.isDirectory()) {
-      if(!request.getPathInfo().endsWith(URIUtil.SLASH)) {
-        response.sendRedirect(response.encodeRedirectURL(URIUtil.addPaths(request.getRequestURI(), URIUtil.SLASH)));
-        return;
-      }
-
-      Resource welcome = getWelcome(resource);
-      if(welcome != null && welcome.exists()) {
-        resource = welcome;
-      }
-    }
 
     // set some headers
     long last_modified = resource.lastModified();
