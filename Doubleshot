@@ -23,6 +23,7 @@ Doubleshot.new do |config|
   end
 
   config.jar "org.eclipse.jetty:jetty-server:jar:8.1.5.v20120716"
+  config.jar "org.eclipse.jetty:jetty-webapp:jar:8.1.5.v20120716"
   config.jar "org.infinispan:infinispan-core:jar:5.1.6.FINAL"
   config.jar "ch.qos.logback:logback-core:jar:1.0.7"
 

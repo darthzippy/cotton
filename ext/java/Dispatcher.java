@@ -7,12 +7,34 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.eclipse.jetty.server.Request;
-import org.eclipse.jetty.server.handler.AbstractHandler;
+import org.eclipse.jetty.server.session.SessionHandler;
 
-public class Dispatcher extends AbstractHandler {
+import org.sam.cotton.session.InfinispanSessionData;
+import org.sam.cotton.session.InfinispanSessionManager;
 
-  public void handle(
-    String target,
+import org.infinispan.manager.DefaultCacheManager;
+import org.infinispan.Cache;
+
+public class Dispatcher extends SessionHandler {
+
+  public Dispatcher() {
+    super();
+    // initialize inifinispan with a given configuration
+    DefaultCacheManager cache_manager = new DefaultCacheManager();
+    Cache<String, InfinispanSessionData> cache = cache_manager.getCache();
+    
+    // create a InfinispanSessionManager instance
+    InfinispanSessionManager session_manager = new InfinispanSessionManager();
+    
+    // and apply the infinispan cache
+    session_manager.setCache(cache);
+    // and start the cache
+    cache.start();
+    
+    setSessionManager(session_manager);
+  }
+  
+  public void doHandle(
     Request baseRequest,
     HttpServletRequest request,
     HttpServletResponse response

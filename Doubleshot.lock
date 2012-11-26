@@ -1,6 +1,7 @@
 ---
 JARS:
 - org.eclipse.jetty:jetty-server:jar:8.1.5.v20120716
+- org.eclipse.jetty:jetty-webapp:jar:8.1.5.v20120716
 - org.infinispan:infinispan-core:jar:5.1.6.FINAL
 - ch.qos.logback:logback-core:jar:1.0.7
 - org.jruby:jruby:jar:1.7.0
@@ -8,7 +9,10 @@ JARS:
 - org.eclipse.jetty:jetty-continuation:jar:8.1.5.v20120716
 - org.eclipse.jetty:jetty-http:jar:8.1.5.v20120716
 - org.eclipse.jetty:jetty-io:jar:8.1.5.v20120716
+- org.eclipse.jetty:jetty-xml:jar:8.1.5.v20120716
 - org.eclipse.jetty:jetty-util:jar:8.1.5.v20120716
+- org.eclipse.jetty:jetty-servlet:jar:8.1.5.v20120716
+- org.eclipse.jetty:jetty-security:jar:8.1.5.v20120716
 - org.jgroups:jgroups:jar:3.0.11.Final
 - org.jboss.spec.javax.transaction:jboss-transaction-api_1.1_spec:jar:1.0.0.Final
 - org.jboss.marshalling:jboss-marshalling-river:jar:1.3.11.GA
