@@ -1,39 +1,33 @@
-Cotton
-======
+# Cotton
 
 [![Build Status](https://secure.travis-ci.org/sam/cotton.png?branch=master)](https://next.travis-ci.org/sam/cotton)
 
 JRuby Web Application Framework
 
-Development
-=====
+## Development
 
 If you'd like to clone the framework itself and play around with it, follow these steps:
 
-Install Doubleshot
-===
+#### Install Doubleshot
 
 ```bash
 gem install doubleshot
 ```
 
-Clone Cotton
-===
+#### Clone Cotton
 
 ```bash
 git clone git://github.com/sam/cotton.git
 cd cotton
 ```
 
-Run the built-in server
-===
+#### Run the built-in server
 
 ```bash
 bin/cotton server
 ```
 
-Examples
-===
+#### Examples
 
 Now you can make some example requests demonstrating the application dispatcher, static file serving, and welcome pages (`index.html`):
 
