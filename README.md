@@ -64,9 +64,7 @@ $ curl http://localhost:9292/welcome/
 </html>
 ```
 
-All these examples hover around 5,000 requests-per-second with same-machine console logging disabled using `httperf`. For now. This should be sped up drastically once response caching is implemented for `PublicFileHandler`. Most requests for static files that are requested multiple times will be served directly from memory then, and the `PublicFileHandler` will also cache "misses" so that requests for dynamic content can effectively short-circuit the `PublicFileHandler` for the most requested routes.
-
-These caches will be flushed by a file system watcher whenever the static file system is modified.
+All these examples hover around 5,000 requests-per-second with same-machine console logging disabled using `httperf`.
 
 ```bash
 $ httperf --num-conns=50 --num-calls=2000 --port 9292 --uri=/welcome
