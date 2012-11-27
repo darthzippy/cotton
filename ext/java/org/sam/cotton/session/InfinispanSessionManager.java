@@ -1,186 +1,338 @@
+//  ========================================================================
+//  Copyright (c) 2012 Sam Smoot
+//  ------------------------------------------------------------------------
+//  Source is a derivative work of the jetty-nosql package.
+//
+//  ========================================================================
+//  Copyright (c) 1995-2012 Mort Bay Consulting Pty. Ltd.
+//  ------------------------------------------------------------------------
+//  All rights reserved. This program and the accompanying materials
+//  are made available under the terms of the Eclipse Public License v1.0
+//  and Apache License v2.0 which accompanies this distribution.
+//
+//      The Eclipse Public License is available at
+//      http://www.eclipse.org/legal/epl-v10.html
+//
+//      The Apache License v2.0 is available at
+//      http://www.opensource.org/licenses/apache2.0.php
+//
+//  You may elect to redistribute this code under either of these licenses.
+//  ========================================================================
+//
+
 package org.sam.cotton.session;
 
-import java.io.Serializable;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import javax.servlet.http.HttpServletRequest;
 
-import org.eclipse.jetty.server.session.AbstractSessionManager;
+import org.eclipse.jetty.server.SessionManager;
 import org.eclipse.jetty.server.session.AbstractSession;
+import org.eclipse.jetty.server.session.AbstractSessionManager;
 import org.eclipse.jetty.util.log.Log;
-import org.infinispan.Cache;
+import org.eclipse.jetty.util.log.Logger;
 
-public class InfinispanSessionManager extends AbstractSessionManager {
+public abstract class InfinispanSessionManager extends AbstractSessionManager
+		implements SessionManager {
+	private final static Logger __log = Log.getLogger("org.sam.cotton.session");
 
-  protected Cache<String, InfinispanSessionData> cache;
+	protected final ConcurrentMap<String, InfinispanSession> _sessions = new ConcurrentHashMap<String, InfinispanSession>();
 
-  // Since this only calls super(), it shouldn't be necessary
-  // to implement it. Right?
-//  public InfinispanSessionManager() {
-//    super();
-//  }
-  
-  /**
-   * add a Session to the session store
-   */
-  @Override
-  protected void addSession(AbstractSession session) {
+	private int _stalePeriod = 0;
+	private int _savePeriod = 0;
+	private int _idlePeriod = -1;
+	private boolean _invalidateOnStop;
+	private boolean _saveAllAttributes;
 
-    InfinispanSessionManager.Session spanSession = ((InfinispanSessionManager.Session) session);
-    
-    if (Log.isDebugEnabled())
-      Log.debug("addSession call " + spanSession.getClusterId());
+	/* ------------------------------------------------------------ */
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see org.eclipse.jetty.server.session.AbstractSessionManager#doStart()
+	 */
+	@Override
+	public void doStart() throws Exception {
+		super.doStart();
+	}
 
-    cache.put(spanSession.getClusterId(), spanSession._data);
+	/* ------------------------------------------------------------ */
+	@Override
+	protected void addSession(AbstractSession session) {
+		if (isRunning())
+			_sessions.put(session.getClusterId(), (InfinispanSession) session);
+	}
 
-  }
-  /**
-   * get the session by session id
-   * @returns the session or NULL if no session exists
-   */
-  @Override
-  public Session getSession(String idInCluster) {
+	/* ------------------------------------------------------------ */
+	@Override
+	public AbstractSession getSession(String idInCluster) {
+		InfinispanSession session = _sessions.get(idInCluster);
 
-    if (Log.isDebugEnabled())
-      Log.debug("get Session from cache " + idInCluster);
+		__log.debug("getSession: " + session);
 
-    InfinispanSessionData data = (InfinispanSessionData) cache
-        .get(idInCluster);
+		if (session == null) {
+			session = loadSession(idInCluster);
 
-    if (data == null) {
-      return null;
-    } else {
-      return new Session(data);
-    }
-  }
+			if (session != null) {
+				InfinispanSession race = _sessions.putIfAbsent(idInCluster,
+						session);
+				if (race != null) {
+					session.willPassivate();
+					session.clearAttributes();
+					session = race;
+				}
+			}
+		}
 
-  /**
-   * should return the session map
-   * TODO: think about is it clever to do this in a cluster environment?
-   */
-  @Override
-  public Map getSessionMap() {
-    if (Log.isDebugEnabled())
-      Log.debug("getSessionMap call - unsupported");
-    return null;
-  }
-  /**
-   * delete all sessions
-   */
-  @Override
-  protected void invalidateSessions() {
-    if (Log.isDebugEnabled())
-      Log.debug("invalidateSessions  call");
-    cache.clear();
-  }
-  /**
-   * create a new session
-   */
-  @Override
-  protected Session newSession(HttpServletRequest request) {
-    if (Log.isDebugEnabled())
-      Log.debug("new Session call");
-    return new Session(this, request);
-  }
-  /**
-   * remove a session
-   */
-  @Override
-  protected boolean removeSession(String idInCluster) {
-    if (Log.isDebugEnabled())
-      Log.debug("removeSession call");
-    cache.remove(idInCluster);
-  }
+		return session;
+	}
 
-  protected class Session extends AbstractSession implements Serializable {
+	/* ------------------------------------------------------------ */
+	@Override
+	protected void invalidateSessions() throws Exception {
+		// Invalidate all sessions to cause unbind events
+		ArrayList<InfinispanSession> sessions = new ArrayList<InfinispanSession>(
+				_sessions.values());
+		int loop = 100;
+		while (sessions.size() > 0 && loop-- > 0) {
+			// If we are called from doStop
+			if (isStopping()) {
+				// Then we only save and remove the session - it is not
+				// invalidated.
+				for (InfinispanSession session : sessions) {
+					session.save(false);
+					removeSession(session, false);
+				}
+			} else {
+				for (InfinispanSession session : sessions)
+					session.invalidate();
+			}
 
-    private static final long serialVersionUID = -7709121635752136930L;
+			// check that no new sessions were created while we were iterating
+			sessions = new ArrayList<InfinispanSession>(_sessions.values());
+		}
+	}
 
-    private final InfinispanSessionData _data;
+	/* ------------------------------------------------------------ */
+	@Override
+	protected AbstractSession newSession(HttpServletRequest request) {
+		long created = System.currentTimeMillis();
+		return new InfinispanSession(this, request);
+	}
 
-    protected Session(AbstractSessionManager manager, HttpServletRequest request) {
-      super(manager, request);
-      if (Log.isDebugEnabled())
-        Log.debug("Session constructor call");
-      _data = new InfinispanSessionData(getClusterId());
-      _data.setMaxIdleMs(_dftMaxIdleSecs * 1000);
-      _data.setExpiryTime(_dftMaxIdleSecs < 0 ? 0 : (System.currentTimeMillis() + (_dftMaxIdleSecs * 1000)));
-      _values = _data.getAttributeMap();
-    }
+	/* ------------------------------------------------------------ */
+	@Override
+	protected boolean removeSession(String idInCluster) {
+		synchronized (this) {
+			InfinispanSession session = _sessions.remove(idInCluster);
 
-    protected Session(InfinispanSessionData data) {
-      super(data.getCreated(), data.getId());
-      _data = data;
-      _data.setMaxIdleMs(_dftMaxIdleSecs * 1000);
-      _values = data.getAttributeMap();
-    }
+			try {
+				if (session != null) {
+					return remove(session);
+				}
+			} catch (Exception e) {
+				__log.warn("Problem deleting session id=" + idInCluster, e);
+			}
 
-    @Override
-    protected Map newAttributeMap() {
-      if (Log.isDebugEnabled())
-        Log.debug("newAttributeMap call");
-      return _data.getAttributeMap();
-    }
+			return session != null;
+		}
+	}
 
-    @Override
-	public String getClusterId() {
-      if (Log.isDebugEnabled())
-        Log.debug("getclusterid: " + super.getClusterId());
-      return super.getClusterId();
-    }
+	/* ------------------------------------------------------------ */
+	protected void invalidateSession(String idInCluster) {
+		synchronized (this) {
+			InfinispanSession session = _sessions.remove(idInCluster);
 
-    @Override
-    protected void cookieSet() {
-      super.cookieSet();
-      if (Log.isDebugEnabled())
-        Log.debug("cookieSet");
-      _data.setCookieSet(_data.getAccessed());
-    }
+			try {
+				if (session != null) {
+					remove(session);
+				}
+			} catch (Exception e) {
+				__log.warn("Problem deleting session id=" + idInCluster, e);
+			}
+		}
 
-    /**
-     * Entry to session.
-     * @return 
-     *
-     * @see org.eclipse.jetty.server.session.AbstractSessionManager.Session#access(long)
-     */
-    @Override
-    protected boolean access(long time) {
-      if (Log.isDebugEnabled())
-        Log.debug("access");
-      super.access(time);
-      _data.setLastAccessed(_data.getAccessed());
-      _data.setAccessed(time);
-      _data.setExpiryTime(_dftMaxIdleSecs < 0 ? 0 : (time + (_dftMaxIdleSecs * 1000)));
-	return true;
-    }
+		/*
+		 * ought we not go to cluster and mark it invalid?
+		 */
 
-    /**
-     * Exit from session
-     *
-     * @see org.eclipse.jetty.server.session.AbstractSessionManager.Session#complete()
-     */
-    @Override
-    protected void complete() {
-      super.complete();
-      if (Log.isDebugEnabled())
-        Log.debug("complete " + _data);
-      cache.replace(this.getClusterId(), _data);
-    }
+	}
 
-    @Override
-    protected void timeout() throws IllegalStateException {
-      super.timeout();
-      if (Log.isDebugEnabled())
-        Log.debug("timeout");
-      cache.remove(getClusterId());
-    }
-  }
+	/* ------------------------------------------------------------ */
+	/**
+	 * The State Period is the maximum time in seconds that an in memory session
+	 * is allows to be stale:
+	 * <ul>
+	 * <li>If this period is exceeded, the DB will be checked to see if a more
+	 * recent version is available.</li>
+	 * <li>If the state period is set to a value < 0, then no staleness check
+	 * will be made.</li>
+	 * <li>If the state period is set to 0, then a staleness check is made
+	 * whenever the active request count goes from 0 to 1.</li>
+	 * </ul>
+	 * 
+	 * @return the stalePeriod in seconds
+	 */
+	public int getStalePeriod() {
+		return _stalePeriod;
+	}
 
-  public Cache<String, InfinispanSessionData> getCache() {
-    return cache;
-  }
+	/* ------------------------------------------------------------ */
+	/**
+	 * The State Period is the maximum time in seconds that an in memory session
+	 * is allows to be stale:
+	 * <ul>
+	 * <li>If this period is exceeded, the DB will be checked to see if a more
+	 * recent version is available.</li>
+	 * <li>If the state period is set to a value < 0, then no staleness check
+	 * will be made.</li>
+	 * <li>If the state period is set to 0, then a staleness check is made
+	 * whenever the active request count goes from 0 to 1.</li>
+	 * </ul>
+	 * 
+	 * @param stalePeriod
+	 *            the stalePeriod in seconds
+	 */
+	public void setStalePeriod(int stalePeriod) {
+		_stalePeriod = stalePeriod;
+	}
 
-  public void setCache(Cache<String, InfinispanSessionData> cache) {
-    this.cache = cache;
-  }
+	/* ------------------------------------------------------------ */
+	/**
+	 * The Save Period is the time in seconds between saves of a dirty session
+	 * to the DB. When this period is exceeded, the a dirty session will be
+	 * written to the DB:
+	 * <ul>
+	 * <li>a save period of -2 means the session is written to the DB whenever
+	 * setAttribute is called.</li>
+	 * <li>a save period of -1 means the session is never saved to the DB other
+	 * than on a shutdown</li>
+	 * <li>a save period of 0 means the session is written to the DB whenever
+	 * the active request count goes from 1 to 0.</li>
+	 * <li>a save period of 1 means the session is written to the DB whenever
+	 * the active request count goes from 1 to 0 and the session is dirty.</li>
+	 * <li>a save period of > 1 means the session is written after that period
+	 * in seconds of being dirty.</li>
+	 * </ul>
+	 * 
+	 * @return the savePeriod -2,-1,0,1 or the period in seconds >=2
+	 */
+	public int getSavePeriod() {
+		return _savePeriod;
+	}
+
+	/* ------------------------------------------------------------ */
+	/**
+	 * The Save Period is the time in seconds between saves of a dirty session
+	 * to the DB. When this period is exceeded, the a dirty session will be
+	 * written to the DB:
+	 * <ul>
+	 * <li>a save period of -2 means the session is written to the DB whenever
+	 * setAttribute is called.</li>
+	 * <li>a save period of -1 means the session is never saved to the DB other
+	 * than on a shutdown</li>
+	 * <li>a save period of 0 means the session is written to the DB whenever
+	 * the active request count goes from 1 to 0.</li>
+	 * <li>a save period of 1 means the session is written to the DB whenever
+	 * the active request count goes from 1 to 0 and the session is dirty.</li>
+	 * <li>a save period of > 1 means the session is written after that period
+	 * in seconds of being dirty.</li>
+	 * </ul>
+	 * 
+	 * @param savePeriod
+	 *            the savePeriod -2,-1,0,1 or the period in seconds >=2
+	 */
+	public void setSavePeriod(int savePeriod) {
+		_savePeriod = savePeriod;
+	}
+
+	/* ------------------------------------------------------------ */
+	/**
+	 * The Idle Period is the time in seconds before an in memory session is
+	 * passivated. When this period is exceeded, the session will be passivated
+	 * and removed from memory. If the session was dirty, it will be written to
+	 * the DB. If the idle period is set to a value < 0, then the session is
+	 * never idled. If the save period is set to 0, then the session is idled
+	 * whenever the active request count goes from 1 to 0.
+	 * 
+	 * @return the idlePeriod
+	 */
+	public int getIdlePeriod() {
+		return _idlePeriod;
+	}
+
+	/* ------------------------------------------------------------ */
+	/**
+	 * The Idle Period is the time in seconds before an in memory session is
+	 * passivated. When this period is exceeded, the session will be passivated
+	 * and removed from memory. If the session was dirty, it will be written to
+	 * the DB. If the idle period is set to a value < 0, then the session is
+	 * never idled. If the save period is set to 0, then the session is idled
+	 * whenever the active request count goes from 1 to 0.
+	 * 
+	 * @param idlePeriod
+	 *            the idlePeriod in seconds
+	 */
+	public void setIdlePeriod(int idlePeriod) {
+		_idlePeriod = idlePeriod;
+	}
+
+	/* ------------------------------------------------------------ */
+	/**
+	 * Invalidate sessions when the session manager is stopped otherwise save
+	 * them to the DB.
+	 * 
+	 * @return the invalidateOnStop
+	 */
+	public boolean isInvalidateOnStop() {
+		return _invalidateOnStop;
+	}
+
+	/* ------------------------------------------------------------ */
+	/**
+	 * Invalidate sessions when the session manager is stopped otherwise save
+	 * them to the DB.
+	 * 
+	 * @param invalidateOnStop
+	 *            the invalidateOnStop to set
+	 */
+	public void setInvalidateOnStop(boolean invalidateOnStop) {
+		_invalidateOnStop = invalidateOnStop;
+	}
+
+	/* ------------------------------------------------------------ */
+	/**
+	 * Save all attributes of a session or only update the dirty attributes.
+	 * 
+	 * @return the saveAllAttributes
+	 */
+	public boolean isSaveAllAttributes() {
+		return _saveAllAttributes;
+	}
+
+	/* ------------------------------------------------------------ */
+	/**
+	 * Save all attributes of a session or only update the dirty attributes.
+	 * 
+	 * @param saveAllAttributes
+	 *            the saveAllAttributes to set
+	 */
+	public void setSaveAllAttributes(boolean saveAllAttributes) {
+		_saveAllAttributes = saveAllAttributes;
+	}
+
+	/* ------------------------------------------------------------ */
+	abstract protected InfinispanSession loadSession(String clusterId);
+
+	/* ------------------------------------------------------------ */
+	abstract protected Object save(InfinispanSession session, Object version,
+			boolean activateAfterSave);
+
+	/* ------------------------------------------------------------ */
+	abstract protected Object refresh(InfinispanSession session, Object version);
+
+	/* ------------------------------------------------------------ */
+	abstract protected boolean remove(InfinispanSession session);
+
 }
