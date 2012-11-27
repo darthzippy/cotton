@@ -14,9 +14,12 @@ public class InfinispanSessionManager extends AbstractSessionManager {
 
   protected Cache<String, InfinispanSessionData> cache;
 
-  public InfinispanSessionManager() {
-    super();
-  }
+  // Since this only calls super(), it shouldn't be necessary
+  // to implement it. Right?
+//  public InfinispanSessionManager() {
+//    super();
+//  }
+  
   /**
    * add a Session to the session store
    */
@@ -24,7 +27,7 @@ public class InfinispanSessionManager extends AbstractSessionManager {
   protected void addSession(AbstractSession session) {
 
     InfinispanSessionManager.Session spanSession = ((InfinispanSessionManager.Session) session);
-
+    
     if (Log.isDebugEnabled())
       Log.debug("addSession call " + spanSession.getClusterId());
 
@@ -120,7 +123,7 @@ public class InfinispanSessionManager extends AbstractSessionManager {
     }
 
     @Override
-    protected String getClusterId() {
+	public String getClusterId() {
       if (Log.isDebugEnabled())
         Log.debug("getclusterid: " + super.getClusterId());
       return super.getClusterId();
@@ -136,17 +139,19 @@ public class InfinispanSessionManager extends AbstractSessionManager {
 
     /**
      * Entry to session.
+     * @return 
      *
      * @see org.eclipse.jetty.server.session.AbstractSessionManager.Session#access(long)
      */
     @Override
-    protected void access(long time) {
+    protected boolean access(long time) {
       if (Log.isDebugEnabled())
         Log.debug("access");
       super.access(time);
       _data.setLastAccessed(_data.getAccessed());
       _data.setAccessed(time);
-      _data.setExpiryTime(_maxIdleMs < 0 ? 0 : (time + _maxIdleMs));
+      _data.setExpiryTime(_dftMaxIdleSecs < 0 ? 0 : (time + (_dftMaxIdleSecs * 1000)));
+	return true;
     }
 
     /**
@@ -159,7 +164,7 @@ public class InfinispanSessionManager extends AbstractSessionManager {
       super.complete();
       if (Log.isDebugEnabled())
         Log.debug("complete " + _data);
-      cache.replace(_clusterId, _data);
+      cache.replace(this.getClusterId(), _data);
     }
 
     @Override

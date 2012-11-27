@@ -2,3 +2,6 @@ target
 *.gem
 .doubleshot_test.pid
 .classpath.cache
+.classpath
+.settings
+.project
