@@ -69,7 +69,7 @@ class Cotton
       elsif command = commands.detect { |command| command.task_name == ARGV[0] }
         command.start(ARGV[1..-1])
       else
-        usage(ARGV[0])
+        Cotton::CLI::Commands::Server::start []
       end
     end
 
