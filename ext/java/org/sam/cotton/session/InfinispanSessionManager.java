@@ -40,17 +40,15 @@ public class InfinispanSessionManager extends AbstractSessionManager
 		implements SessionManager {
 	private final static Logger __log = Log.getLogger("org.sam.cotton.session");
 
-	protected final ConcurrentMap<String, InfinispanSession> _sessions = new ConcurrentHashMap<String, InfinispanSession>();
-
 	private int _stalePeriod = 0;
 	private int _savePeriod = 0;
 	private int _idlePeriod = -1;
 	private boolean _invalidateOnStop;
 	private boolean _saveAllAttributes;
-	private Cache<String, InfinispanSession> _cache;
+	private Cache<String, InfinispanSession> _sessions;
 	
 	public InfinispanSessionManager(Cache<String, InfinispanSession> cache) {
-		_cache = cache;
+		_sessions = cache;
 	}
 
 	/* ------------------------------------------------------------ */
@@ -331,12 +329,12 @@ public class InfinispanSessionManager extends AbstractSessionManager
 
 	/* ------------------------------------------------------------ */
 	protected InfinispanSession loadSession(String clusterId) {
-		return _cache.get(clusterId);
+		return _sessions.get(clusterId);
 	}
 
 	/* ------------------------------------------------------------ */
 	protected Object save(InfinispanSession session, Object version, boolean activateAfterSave) {
-		return _cache.put(session.getClusterId(), session);
+		return _sessions.put(session.getClusterId(), session);
 	}
 
 	/* ------------------------------------------------------------ */
@@ -344,7 +342,7 @@ public class InfinispanSessionManager extends AbstractSessionManager
 
 	/* ------------------------------------------------------------ */
 	protected boolean remove(InfinispanSession session) {
-		return _cache.remove(session.getClusterId()) != null;
+		return _sessions.remove(session.getClusterId()) != null;
 	}
 
 }
