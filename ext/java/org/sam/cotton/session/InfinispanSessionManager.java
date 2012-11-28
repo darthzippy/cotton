@@ -34,7 +34,9 @@ import org.eclipse.jetty.server.session.AbstractSessionManager;
 import org.eclipse.jetty.util.log.Log;
 import org.eclipse.jetty.util.log.Logger;
 
-public abstract class InfinispanSessionManager extends AbstractSessionManager
+import org.infinispan.Cache;
+
+public class InfinispanSessionManager extends AbstractSessionManager
 		implements SessionManager {
 	private final static Logger __log = Log.getLogger("org.sam.cotton.session");
 
@@ -45,6 +47,11 @@ public abstract class InfinispanSessionManager extends AbstractSessionManager
 	private int _idlePeriod = -1;
 	private boolean _invalidateOnStop;
 	private boolean _saveAllAttributes;
+	private Cache<String, InfinispanSession> _cache;
+	
+	public InfinispanSessionManager(Cache<String, InfinispanSession> cache) {
+		_cache = cache;
+	}
 
 	/* ------------------------------------------------------------ */
 	/*
@@ -323,16 +330,21 @@ public abstract class InfinispanSessionManager extends AbstractSessionManager
 	}
 
 	/* ------------------------------------------------------------ */
-	abstract protected InfinispanSession loadSession(String clusterId);
+	protected InfinispanSession loadSession(String clusterId) {
+		return _cache.get(clusterId);
+	}
 
 	/* ------------------------------------------------------------ */
-	abstract protected Object save(InfinispanSession session, Object version,
-			boolean activateAfterSave);
+	protected Object save(InfinispanSession session, Object version, boolean activateAfterSave) {
+		return _cache.put(session.getClusterId(), session);
+	}
 
 	/* ------------------------------------------------------------ */
-	abstract protected Object refresh(InfinispanSession session, Object version);
+	protected Object refresh(InfinispanSession session, Object version) { return null; }
 
 	/* ------------------------------------------------------------ */
-	abstract protected boolean remove(InfinispanSession session);
+	protected boolean remove(InfinispanSession session) {
+		return _cache.remove(session.getClusterId()) != null;
+	}
 
 }
