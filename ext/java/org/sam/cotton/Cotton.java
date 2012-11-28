@@ -22,30 +22,30 @@ public class Cotton {
 
   public static Server start(Integer port) throws Exception {
     Server server = new Server(port);
-    
+
     ServletContextHandler app = new ServletContextHandler(ServletContextHandler.SESSIONS);
     app.setContextPath("/");
     app.setResourceBase("public");
     app.setServer(server);
 
-    ServletHolder dispatcher = new ServletHolder(new Dispatcher());
-    app.addServlet(dispatcher, "/*");
-    
     // initialize infinispan with a given configuration
     DefaultCacheManager cache_manager = new DefaultCacheManager();
     Cache<String, InfinispanSession> cache = cache_manager.getCache();
-    
+
+    ServletHolder dispatcher = new ServletHolder(new Dispatcher(cache));
+    app.addServlet(dispatcher, "/*");
+
     // start the cache
     cache.start();
     SessionHandler session_handler = new SessionHandler(new InfinispanSessionManager(cache));
     app.setSessionHandler(session_handler);
-    
+
     HandlerList handlers = new HandlerList();
     handlers.setHandlers(new Handler[] { new PublicFileHandler("public"), app });
-    
+
     // Uncomment to enable logging:
     handlers.addHandler(new RequestLogHandler());
-    
+
     server.setHandler(handlers);
     server.start();
     server.join();
