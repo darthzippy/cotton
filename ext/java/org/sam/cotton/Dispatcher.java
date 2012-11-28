@@ -24,9 +24,10 @@ public class Dispatcher extends HttpServlet {
     HttpSession session = request.getSession();
     
     int counter = 0;
-    if (session.getAttribute("counter") != null)
+    if (session.getAttribute("counter") != null) {
     	counter = (Integer) session.getAttribute("counter");
-    
+    	counter++;
+    }
     session.setAttribute("counter", counter);
     
     out.printf("COUNT: %d", counter);
